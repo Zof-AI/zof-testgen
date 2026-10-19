@@ -3,6 +3,7 @@ import { redactText } from "@zof-ai/evidence-spec";
 import { fail, guard, parseJson, record, SafeInputError } from "./common.js";
 import {
   generateTests,
+  assertNoSensitive,
   selectFunctionSource,
   validateCandidateSyntax,
   type GenerationInput,
@@ -61,6 +62,7 @@ function settings(options: OllamaOptions) {
     !/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/.test(input.model)
   )
     fail("MODEL_NAME_INVALID");
+  assertNoSensitive(input.model);
   // Loopback servers can themselves proxy cloud models. Explicit cloud tags
   // are rejected, and the operator must run a trusted server with cloud off.
   if (/(?:^|[.:_-])cloud(?:$|[.:_-])/i.test(input.model))
@@ -162,6 +164,7 @@ function validateOutput(
       Buffer.byteLength(suggestion.message) > 1024
     )
       fail("MODEL_OUTPUT_SCHEMA_INVALID");
+    assertNoSensitive(suggestion.function, "MODEL_OUTPUT_SENSITIVE");
     return {
       function: suggestion.function,
       kind: suggestion.kind,
@@ -309,6 +312,7 @@ export async function generateTestsWithOllama(
   // Reuse the deterministic validator and its supported-language boundaries.
   generateTests(input);
   const source = selectFunctionSource(input);
+  assertNoSensitive(source);
   if (Buffer.byteLength(source) > MAX_SOURCE_BYTES)
     fail("MODEL_SOURCE_TOO_LARGE");
   const path =

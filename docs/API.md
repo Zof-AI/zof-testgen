@@ -8,6 +8,8 @@ The CLI reads the same input from JSON except `sourcePath` replaces `source`. `-
 
 JSON input/source limits are 4 MiB, 100 selected functions and 1,000 reproductions. JSON nesting is limited to 48 and 100,000 values; TypeScript AST traversal is bounded. Python parsing runs in isolated interpreter mode without site packages, with a five-second timeout and bounded output. TypeScript parsing/transpilation uses the public TypeScript compiler and never loads tsconfig plugins.
 
+Generation rejects recognized credentials, URL patterns and sensitive keyed values in function/module metadata or reproductions with `GENERATION_INPUT_SENSITIVE`. The caller's values and expected results are never silently redacted or changed. The public writer similarly rejects recognized sensitive output with `GENERATION_OUTPUT_SENSITIVE`. Use reviewed synthetic fixtures. Detection is conservative and may reject benign values under sensitive keys; it does not recognize every possible secret encoding.
+
 
 `generateTestsWithOllama(input, options)` is async and returns the same GenerationResult shape with explicit model-generated warnings. Options require `allowLocalModel: true` and an installed local `model`; optional `port` (default 11434, 1024–65535), `maxTokens` (default 1024, 16–4096), and `timeoutMs` (default 30000, 100–120000). Unknown options and cloud-tag model names reject before network access. `createOllamaAdapter(options)` validates the options without connecting and returns `{id:'ollama-local', generate(input)}`. Neither API executes output.
 

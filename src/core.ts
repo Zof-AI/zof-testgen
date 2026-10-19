@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { redact } from "@zof-ai/evidence-spec";
 import { spawnSync } from "node:child_process";
 import { mkdir, lstat, open, realpath } from "node:fs/promises";
 import { constants } from "node:fs";
@@ -154,6 +155,18 @@ function moduleValid(input: GenerationInput): void {
     relativePath(path);
   }
 }
+
+/** Reject instead of modifying any supplied regression oracle or metadata. */
+export function assertNoSensitive(value: unknown, code = "GENERATION_INPUT_SENSITIVE"): void {
+  let changed: boolean;
+  try {
+    changed = JSON.stringify(redact(value)) !== JSON.stringify(value);
+  } catch {
+    fail("GENERATION_INPUT_UNSUPPORTED");
+  }
+  if (changed) fail(code);
+}
+
 export function generateTests(input: GenerationInput): GenerationResult {
   guard(input);
   if (!input || !["typescript", "python"].includes(input.language))
@@ -172,6 +185,12 @@ export function generateTests(input: GenerationInput): GenerationResult {
   )
     fail("FUNCTIONS_INVALID");
   moduleValid(input);
+  assertNoSensitive({
+    functions: input.functions,
+    module: input.module,
+    reproductions: input.reproductions ?? [],
+    coveredBranches: input.coveredBranches ?? [],
+  });
   if (
     input.coveredBranches !== undefined &&
     (!Array.isArray(input.coveredBranches) ||
@@ -342,6 +361,8 @@ export async function writeCandidates(
   options: { dryRun?: boolean } = {},
 ): Promise<string[]> {
   guard(result);
+  // This public writer is also a boundary for caller-created candidates.
+  assertNoSensitive(result, "GENERATION_OUTPUT_SENSITIVE");
   if (!Array.isArray(result.files) || result.files.length > 100)
     fail("FILES_INVALID");
   for (const file of result.files) {

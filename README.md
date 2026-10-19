@@ -33,6 +33,8 @@ node dist/cli.js config.json --root examples/branch-review --json
 
 `--write` exclusively creates a file under `generated/`; it never overwrites an existing file. Default dry-run returns the complete candidate in JSON without touching disk. A repeated write returns exit 2. Review candidates and expected values before execution. For the supplied trusted TypeScript example, write once and run `node --experimental-strip-types --test generated/zof-regression.test.ts` from the example directory. For the Python example, run `python3 -m unittest discover -s generated` from its directory. These commands are manual acceptance steps and execute the example module.
 
+Use synthetic inputs. Recognized credentials and sensitive keyed values in reproductions or generation metadata are rejected before output. Expected results are never silently redacted or changed. The local-model path also checks selected source before transmitting it.
+
 ## Library
 
 ```js

@@ -16,6 +16,8 @@ const result = await generateTestsWithOllama({
 
 This example requires that specific model to be installed already. It has not been run against a real model as part of this release. The adapter sends selected function declarations, language, selected names, the module path and supplied reproductions. It omits unrelated declarations and imports. Treat included source and reproductions as data being shared with the local service.
 
+Recognized credentials, URL patterns and sensitive keyed values in selected source, metadata or reproductions are rejected before the request, even with consent. Inputs and test oracles are not rewritten. Unrelated declarations remain omitted. This conservative check may reject benign synthetic data under sensitive keys and is not a guarantee of exhaustive secret detection.
+
 Ollama supports cloud inference as well as local models. Use a trusted server with cloud features disabled, as described in the [Ollama FAQ](https://docs.ollama.com/faq#how-do-i-disable-ollamas-cloud-features). The client rejects explicit cloud-tag model names but cannot establish whether an arbitrary server forwards data. No server settings are changed by this package.
 
 ## Limits and output

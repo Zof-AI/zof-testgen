@@ -80,10 +80,12 @@ try {
     join(temp, "package-model.mjs"),
   );
   run(process.execPath, [join(temp, "package-model.mjs")]);
+  await copyFile(join(repo, "tests/package-privacy.mjs"), join(temp, "package-privacy.mjs"));
+  run(process.execPath, [join(temp, "package-privacy.mjs")]);
   console.log(
     JSON.stringify({
       status: "passed",
-      checks: 7,
+      checks: 11,
       files: packed.files.length,
       package: "@zof-ai/testgen",
     }),
