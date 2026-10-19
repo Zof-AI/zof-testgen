@@ -94,7 +94,8 @@ function outputSchema(path: string, functions: string[]) {
             content: {
               type: "string",
               minLength: 1,
-              maxLength: MAX_CANDIDATE_BYTES,
+              // Large maxLength grammar expansions fail on supported Ollama
+              // runtimes. Enforce the byte cap locally in validateOutput.
             },
           },
         },

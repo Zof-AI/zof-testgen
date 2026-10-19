@@ -120,9 +120,24 @@ test("integration: Ollama protocol sends bounded selected source and validates c
       request.body.format.properties.files.items.properties.path.const,
       candidate.files[0].path,
     );
+    assert.equal(
+      request.body.format.properties.files.items.properties.content.maxLength,
+      undefined,
+    );
   } finally {
     await server.close();
   }
+});
+
+test("security: provider grammar hint omission preserves the application candidate byte cap", async () => {
+  const oversized = structuredClone(candidate);
+  oversized.files[0].content = "x".repeat(128 * 1024 + 1);
+  const server = await fixture((_request, response) => ok(response, envelope(oversized)));
+  try {
+    await assert.rejects(generateTestsWithOllama(input, opts(server.port)), safe("MODEL_OUTPUT_SCHEMA_INVALID"));
+    assert.equal(server.requests[0].body.format.properties.files.items.properties.content.maxLength, undefined);
+    assert.ok(Buffer.byteLength(JSON.stringify(envelope(oversized))) < 256 * 1024);
+  } finally { await server.close(); }
 });
 
 test("security: no consent or invalid options/source causes zero requests", async () => {

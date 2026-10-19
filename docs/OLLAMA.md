@@ -14,7 +14,7 @@ const result = await generateTestsWithOllama({
 }, { allowLocalModel: true, model: 'llama3.2:3b', maxTokens: 1024 });
 ```
 
-This example requires that specific model to be installed already. It has not been run against a real model as part of this release. The adapter sends selected function declarations, language, selected names, the module path and supplied reproductions. It omits unrelated declarations and imports. Treat included source and reproductions as data being shared with the local service.
+This example requires that specific model to be installed already; that particular example/model combination remains unverified. The adapter sends selected function declarations, language, selected names, the module path and supplied reproductions. It omits unrelated declarations and imports. Treat included source and reproductions as data being shared with the local service.
 
 Recognized credentials, URL patterns and sensitive keyed values in selected source, metadata or reproductions are rejected before the request, even with consent. Inputs and test oracles are not rewritten. Unrelated declarations remain omitted. This conservative check may reject benign synthetic data under sensitive keys and is not a guarantee of exhaustive secret detection.
 
@@ -30,6 +30,8 @@ Ollama supports cloud inference as well as local models. Use a trusted server wi
 
 Requests set `stream: false`, a structured JSON output schema, finite `num_predict`, and fixed sampling options. The raw provider envelope, timing data, context, thinking text and provider errors are not returned. TypeScript candidates pass compiler parsing plus syntax-only checking of emitted JavaScript; Python candidates pass isolated AST parsing. Neither check executes imports or test code. Known sensitive output patterns cause a fixed error; they are not silently removed from assertion values.
 
+The provider grammar omits a large `maxLength` hint for candidate content because it can fail during grammar construction in Ollama. The client still enforces the 128 KiB candidate byte cap after the independently bounded 256 KiB response read, along with all schema, filename, syntax and privacy checks. Provider hints never replace client-side validation.
+
 Model-generated candidates and proposed expected values are unverified. Review all code, imports, side effects and oracles before accepting a test. `--write` only creates a new candidate and rejects existing files. Actual execution belongs in a separately approved isolated environment.
 
-Protocol tests use a controlled HTTP fixture, including packaged API/CLI tests. Live-model availability, generation quality and end-to-end model acceptance are **NOT_RUN**. Hosted Zof integration remains blocked pending an approved public contract.
+Protocol tests use a controlled HTTP fixture, including packaged API/CLI tests. A separate isolated Ollama 0.13.5 / `qwen2.5-coder:0.5b` trial confirmed real transport, schema and syntax compatibility after the grammar repair. Its two candidates used unimported Jest globals and each failed under Node 22 on both buggy and corrected fixtures. Full model-generated regression acceptance therefore **FAILED** for that trial; no effective bug detection is claimed. Other model/runtime combinations remain untested. Hosted Zof integration remains blocked pending an approved public contract.

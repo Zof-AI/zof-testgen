@@ -24,6 +24,7 @@ const server = createServer((request, response) => {
     const data = JSON.parse(body);
     assert.equal(request.url, "/api/generate");
     assert.equal(data.stream, false);
+    assert.equal(data.format.properties.files.items.properties.content.maxLength, undefined);
     requests++;
     response.writeHead(200, { "content-type": "application/json" });
     response.end(
