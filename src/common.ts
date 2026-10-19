@@ -1,4 +1,4 @@
-import { redactText, safeReadFile } from "@zofai/evidence-spec";
+import { redactText, safeReadFile } from "@zof-ai/evidence-spec";
 import { isAbsolute } from "node:path";
 export const MAX_INPUT_BYTES = 4 * 1024 * 1024;
 export type Severity = "info" | "low" | "medium" | "high" | "critical";

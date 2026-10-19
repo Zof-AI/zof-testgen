@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { redact, safeWriteFiles } from "@zofai/evidence-spec";
+import { redact, safeWriteFiles } from "@zof-ai/evidence-spec";
 import { spawnSync } from "node:child_process";
 import { posix } from "node:path";
 import {

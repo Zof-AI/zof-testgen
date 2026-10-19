@@ -46,7 +46,7 @@ try {
   );
   const candidates = [];
   const evidence = resolve(
-    "../../orchestration/artifacts/zofai-evidence-spec-0.1.0.tgz",
+    "../../orchestration/artifacts/zof-ai-evidence-spec-0.1.0.tgz",
   );
   try {
     await access(evidence);
@@ -60,17 +60,17 @@ try {
     ...candidates,
     join(temp, packed.filename),
   ]);
-  const cli = join(temp, "node_modules", "@zofai/testgen", "dist/cli.js");
+  const cli = join(temp, "node_modules", "@zof-ai/testgen", "dist/cli.js");
   assert.match(run(process.execPath, [cli, "--version"]), /0\.1\.0/);
   assert.match(run(process.execPath, [cli, "--help"]), /dry-run/);
   run(process.execPath, [
     "--input-type=module",
     "-e",
-    "import assert from 'node:assert/strict'; import { generateTests } from '@zofai/testgen'; const r=generateTests({language:'typescript',source:'export function f(x:number){return x+1;}',functions:['f'],module:'../fixture.ts',reproductions:[{function:'f',args:[1],expected:2}]}); assert.equal(r.syntax.status,'validated'); assert.match(r.files[0].content,/deepStrictEqual/);",
+    "import assert from 'node:assert/strict'; import { generateTests } from '@zof-ai/testgen'; const r=generateTests({language:'typescript',source:'export function f(x:number){return x+1;}',functions:['f'],module:'../fixture.ts',reproductions:[{function:'f',args:[1],expected:2}]}); assert.equal(r.syntax.status,'validated'); assert.match(r.files[0].content,/deepStrictEqual/);",
   ]);
   const metadata = JSON.parse(
     await readFile(
-      join(temp, "node_modules", "@zofai/testgen", "package.json"),
+      join(temp, "node_modules", "@zof-ai/testgen", "package.json"),
       "utf8",
     ),
   );
@@ -87,7 +87,7 @@ try {
       status: "passed",
       checks: 12,
       files: packed.files.length,
-      package: "@zofai/testgen",
+      package: "@zof-ai/testgen",
     }),
   );
 } finally {

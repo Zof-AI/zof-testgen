@@ -1,5 +1,5 @@
 import { request } from "node:http";
-import { redactText } from "@zofai/evidence-spec";
+import { redactText } from "@zof-ai/evidence-spec";
 import { fail, guard, parseJson, record, SafeInputError } from "./common.js";
 import {
   generateTests,

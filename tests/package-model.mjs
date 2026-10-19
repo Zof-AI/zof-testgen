@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { generateTestsWithOllama } from "@zofai/testgen";
+import { generateTestsWithOllama } from "@zof-ai/testgen";
 
 const root = resolve("model-fixture");
 await mkdir(root);
@@ -62,7 +62,7 @@ try {
       ollama: { model: options.model, port: options.port, timeoutMs: 2000 },
     }),
   );
-  const cli = resolve("node_modules/@zofai/testgen/dist/cli.js");
+  const cli = resolve("node_modules/@zof-ai/testgen/dist/cli.js");
   const run = (args) =>
     new Promise((resolve) => {
       const child = spawn(
