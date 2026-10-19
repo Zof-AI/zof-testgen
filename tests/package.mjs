@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  writeFile,
+  readFile,
+  rm,
+  access,
+  copyFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -37,11 +44,20 @@ try {
     join(temp, "package.json"),
     JSON.stringify({ private: true, type: "module" }),
   );
+  const candidates = [];
+  const evidence = resolve(
+    "../../orchestration/artifacts/zof-ai-evidence-spec-0.1.0.tgz",
+  );
+  try {
+    await access(evidence);
+    candidates.push(evidence);
+  } catch {}
   run(process.platform === "win32" ? "npm.cmd" : "npm", [
     "install",
     "--ignore-scripts",
     "--no-audit",
     "--no-fund",
+    ...candidates,
     join(temp, packed.filename),
   ]);
   const cli = join(temp, "node_modules", "@zof-ai/testgen", "dist/cli.js");
@@ -59,10 +75,15 @@ try {
     ),
   );
   assert.ok(!JSON.stringify(metadata).includes("file:"));
+  await copyFile(
+    join(repo, "tests/package-model.mjs"),
+    join(temp, "package-model.mjs"),
+  );
+  run(process.execPath, [join(temp, "package-model.mjs")]);
   console.log(
     JSON.stringify({
       status: "passed",
-      checks: 5,
+      checks: 7,
       files: packed.files.length,
       package: "@zof-ai/testgen",
     }),

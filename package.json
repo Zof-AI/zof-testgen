@@ -1,7 +1,7 @@
 {
   "name": "@zof-ai/testgen",
   "version": "0.1.0",
-  "description": "Deterministic reviewable TypeScript and Python regression test candidates",
+  "description": "Reviewable regression test candidates with deterministic and opt-in local Ollama generation",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,7 +20,10 @@
     "LICENSE",
     "CHANGELOG.md",
     "docs",
-    "examples"
+    "examples",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md"
   ],
   "engines": {
     "node": ">=22"
@@ -53,6 +56,7 @@
     "@types/node": "22.19.11"
   },
   "dependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@zof-ai/evidence-spec": "0.1.0"
   }
 }

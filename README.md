@@ -1,19 +1,24 @@
 # Zof Testgen
 
-Create deterministic, reviewable regression-test candidates for selected TypeScript and Python functions. Supplied bug reproductions become assertions; branch locations, boundary values and invalid-input cases become review suggestions. The tool parses source and validates generated syntax without executing either source or tests.
+Create reviewable regression-test candidates for selected TypeScript and Python functions. Supplied bug reproductions become assertions; branch locations, boundary values and invalid-input cases become review suggestions. Default generation is deterministic and offline. An opt-in Ollama adapter can generate additional candidates through a trusted local model server. Both modes validate syntax without executing source or tests.
 
 ## Local installation
 
-Use Node.js 22 or 24; Python examples require Python 3 with its standard-library AST parser available as `python3`.
+Use Node.js 22 or 24; Python examples require Python 3 with its standard-library AST parser available as `python3`. This prerelease depends on the reviewed `@zof-ai/evidence-spec` 0.1.0 candidate. Install both local artifacts together; public registry installation remains blocked until the dependency and this package are approved and published.
 
 ```sh
-npm ci --ignore-scripts
+npm install --ignore-scripts /path/to/zof-ai-evidence-spec-0.1.0.tgz /path/to/zof-ai-testgen-0.1.0.tgz
+```
+
+For source development, first stage the reviewed evidence candidate and install the locked development dependencies. Then run:
+
+```sh
 npm run build
 npm test
 npm pack --ignore-scripts
 ```
 
-Install the tarball in another project with `npm install /absolute/path/to/package.tgz`. Candidate package name `@zof-ai/testgen`, intended repository URLs and public installation remain unverified until release approval. Proposed Apache-2.0 licensing needs owner/legal approval.
+The lockfile retains portable semver dependencies. A standalone public `npm ci` cannot be verified before those dependencies are published. Candidate package name `@zof-ai/testgen`, intended repository URLs and public installation remain unverified until release approval. Proposed Apache-2.0 licensing needs owner/legal approval.
 
 ## Three examples
 
@@ -40,4 +45,16 @@ const result = generateTests({
 await writeCandidates(process.cwd(), result); // dry-run by default
 ```
 
-The bundled `localDeterministicAdapter` exposes `id` and `generate` for local integration. It is an oracle-driven generator, not a language model. Model-provider integrations and hosted generation are not implemented; no source is transmitted and no credentials are accepted. See [API](docs/API.md), [limitations](docs/LIMITATIONS.md) and [release gates](docs/RELEASE.md).
+## Optional local model generation
+
+With a trusted local-only Ollama server already running and the selected model already installed:
+
+```sh
+node dist/cli.js config.json --root examples/typescript-regression --allow-local-model --model llama3.2:3b --json
+```
+
+Choose an installed model name. `--allow-local-model` authorizes sending the selected function declarations, function/module names and supplied reproductions to `http://127.0.0.1:11434/api/generate`. Unselected declarations and imports are omitted. The default remains a dry-run; `--write` separately creates the validated candidate. Configuration alone cannot grant transmission consent. No model is downloaded or run automatically before this explicit request.
+
+Ollama can forward cloud models, so run a trusted server with cloud features disabled. Explicit cloud-tag model names are rejected; the client cannot attest how a separately administered server handles a request. Model outputs and proposed oracles remain unverified suggestions. No live language-model acceptance has been run for this candidate; controlled protocol tests use a synthetic HTTP server.
+
+`localDeterministicAdapter` exposes the offline generator. `createOllamaAdapter(options)` and `generateTestsWithOllama(input, options)` expose the async model path. See [Ollama configuration and protocol](docs/OLLAMA.md), [API](docs/API.md), [limitations](docs/LIMITATIONS.md) and [release gates](docs/RELEASE.md).

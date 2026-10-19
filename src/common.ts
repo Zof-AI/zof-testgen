@@ -1,3 +1,4 @@
+import { redactText } from "@zof-ai/evidence-spec";
 import { constants } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
 import { resolve, sep, isAbsolute } from "node:path";
@@ -22,7 +23,11 @@ export function record(v: unknown): Record<string, unknown> {
   if (!v || typeof v !== "object" || Array.isArray(v)) fail("OBJECT_REQUIRED");
   return v as Record<string, unknown>;
 }
-export function guard(v: unknown, depth = 0, budget = { n: 0, bytes: 0 }): void {
+export function guard(
+  v: unknown,
+  depth = 0,
+  budget = { n: 0, bytes: 0 },
+): void {
   if (depth > 48 || ++budget.n > 100000) fail("INPUT_COMPLEXITY");
   if (v === null || typeof v === "boolean") return;
   if (typeof v === "string") {
@@ -82,7 +87,10 @@ export async function readBounded(root: string, path: string): Promise<string> {
     if (!full.startsWith(base + sep)) fail("PATH_ESCAPE");
     const before = await lstat(full);
     if (!before.isFile() || before.size > MAX_INPUT_BYTES) fail("FILE_INVALID");
-    const handle = await open(full, constants.O_RDONLY | constants.O_NOFOLLOW | (constants.O_NONBLOCK ?? 0));
+    const handle = await open(
+      full,
+      constants.O_RDONLY | constants.O_NOFOLLOW | (constants.O_NONBLOCK ?? 0),
+    );
     try {
       const stat = await handle.stat();
       if (!stat.isFile() || stat.size > MAX_INPUT_BYTES) fail("FILE_INVALID");
@@ -119,6 +127,7 @@ export function exceeds(
   );
 }
 export function display(path: string): string {
+  path = redactText(path);
   return /^[\w/.{}~:$ -]{1,400}$/.test(path) && !path.includes("://")
     ? path
     : "[location omitted]";
