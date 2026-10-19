@@ -80,7 +80,9 @@ export async function readBounded(root: string, path: string): Promise<string> {
       if (s.isSymbolicLink()) fail("SYMLINK_REJECTED");
     }
     if (!full.startsWith(base + sep)) fail("PATH_ESCAPE");
-    const handle = await open(full, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const before = await lstat(full);
+    if (!before.isFile() || before.size > MAX_INPUT_BYTES) fail("FILE_INVALID");
+    const handle = await open(full, constants.O_RDONLY | constants.O_NOFOLLOW | (constants.O_NONBLOCK ?? 0));
     try {
       const stat = await handle.stat();
       if (!stat.isFile() || stat.size > MAX_INPUT_BYTES) fail("FILE_INVALID");
