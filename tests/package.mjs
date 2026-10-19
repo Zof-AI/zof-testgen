@@ -85,7 +85,7 @@ try {
   console.log(
     JSON.stringify({
       status: "passed",
-      checks: 11,
+      checks: 12,
       files: packed.files.length,
       package: "@zof-ai/testgen",
     }),

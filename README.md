@@ -1,10 +1,29 @@
 # Zof Testgen
 
-Create reviewable regression-test candidates for selected TypeScript and Python functions. Supplied bug reproductions become assertions; branch locations, boundary values and invalid-input cases become review suggestions. Default generation is deterministic and offline. An opt-in Ollama adapter can generate additional candidates through a trusted local model server. Both modes validate syntax without executing source or tests.
+Create reviewable regression-test candidates for selected TypeScript and Python functions. Supplied bug reproductions become assertions; branch locations, boundary values and invalid-input cases become review suggestions. Default generation is deterministic and offline. An opt-in Ollama adapter can generate additional candidates through a trusted local model server. Both modes validate syntax without executing source or tests. Model candidates also need the supported test framework structure and an import of the selected module.
+
+<!-- ZOF_RELEASE_INSTALL_START -->
+## Install from GitHub source
+
+Requires Node.js 22 or 24, npm, and Git. Filesystem operations require Linux or macOS with Python 3.10 or newer; Windows file operations fail closed. Clone this repository and explicitly prepare its reviewed release dependencies:
+
+```sh
+git clone https://github.com/Zof-AI/zof-testgen.git
+cd zof-testgen
+node scripts/bootstrap.mjs --allow-network
+npm ci --ignore-scripts --prefer-offline
+npm run build
+npm test
+```
+
+The bootstrap downloads only the exact public `v0.1.0` dependency assets listed in `scripts/release-dependencies.json`, verifies SHA256 and byte size, and adds them to the npm cache. It does not extract archives, run package scripts, collect application data, or send credentials. Downloads require the explicit flag and follow only HTTPS GitHub asset redirects. Installation then fetches ordinary third-party dependencies from npm. Use a writable npm cache; set `npm_config_cache` consistently for both commands if needed. An unavailable asset, changed hash, or oversized response stops installation.
+
+GitHub source and release artifacts are the initial distribution channel. These instructions do not claim that `@zof-ai` packages are published on npm or that the VS Code extension is listed in Marketplace.
+<!-- ZOF_RELEASE_INSTALL_END -->
 
 ## Local installation
 
-Use Node.js 22 or 24; Python examples require Python 3 with its standard-library AST parser available as `python3`. This prerelease depends on the reviewed `@zof-ai/evidence-spec` 0.1.0 candidate. Install both local artifacts together; public registry installation remains blocked until the dependency and this package are approved and published.
+Use Node.js 22 or 24 on Linux or macOS with Python 3.10 or later available as `python3`. The shared file-access helper uses isolated Python standard-library descriptor operations; Python generation also needs its AST parser. File reads and writes fail closed on Windows or if the helper is unavailable. Pure in-memory TypeScript generation has no Python requirement. This prerelease depends on the reviewed `@zof-ai/evidence-spec` 0.1.0 candidate. Install both local artifacts together; public registry installation remains blocked until the dependency and this package are approved and published.
 
 ```sh
 npm install --ignore-scripts /path/to/zof-ai-evidence-spec-0.1.0.tgz /path/to/zof-ai-testgen-0.1.0.tgz
@@ -52,11 +71,11 @@ await writeCandidates(process.cwd(), result); // dry-run by default
 With a trusted local-only Ollama server already running and the selected model already installed:
 
 ```sh
-node dist/cli.js config.json --root examples/typescript-regression --allow-local-model --model llama3.2:3b --json
+node dist/cli.js config.json --root examples/typescript-regression --allow-local-model --model qwen2.5-coder:1.5b --json
 ```
 
 Choose an installed model name. `--allow-local-model` authorizes sending the selected function declarations, function/module names and supplied reproductions to `http://127.0.0.1:11434/api/generate`. Unselected declarations and imports are omitted. The default remains a dry-run; `--write` separately creates the validated candidate. Configuration alone cannot grant transmission consent. No model is downloaded or run automatically before this explicit request.
 
-Ollama can forward cloud models, so run a trusted server with cloud features disabled. Explicit cloud-tag model names are rejected; the client cannot attest how a separately administered server handles a request. Model outputs and proposed oracles remain unverified suggestions. An isolated Ollama 0.13.5 / `qwen2.5-coder:0.5b` trial returned schema- and syntax-valid candidates, but their unimported Jest globals failed under Node 22 on both buggy and corrected fixtures. Live generated-test acceptance is therefore not passing. Controlled protocol tests use a separate synthetic HTTP server.
+Ollama can forward cloud models, so run a trusted server with cloud features disabled. Explicit cloud-tag model names are rejected; the client cannot attest how a separately administered server handles a request. Model outputs and proposed oracles remain unverified suggestions. The adapter rejects candidates that omit native framework imports, the selected-module import, test registration, or assertions. This structural check does not prove runtime compatibility, oracle correctness, or freedom from side effects. Controlled protocol tests use a separate synthetic HTTP server; see the recorded scope in [validation](docs/VALIDATION.md).
 
 `localDeterministicAdapter` exposes the offline generator. `createOllamaAdapter(options)` and `generateTestsWithOllama(input, options)` expose the async model path. See [Ollama configuration and protocol](docs/OLLAMA.md), [API](docs/API.md), [limitations](docs/LIMITATIONS.md) and [release gates](docs/RELEASE.md).

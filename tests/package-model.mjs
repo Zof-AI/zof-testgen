@@ -17,6 +17,7 @@ const input = {
 const content =
   "import test from 'node:test'; import assert from 'node:assert/strict'; import {increment} from '../fixture.ts'; test('increments',()=>assert.equal(increment(1),2));";
 let requests = 0;
+let suppliedContent = content;
 const server = createServer((request, response) => {
   let body = "";
   request.on("data", (chunk) => (body += chunk));
@@ -32,7 +33,7 @@ const server = createServer((request, response) => {
         model: "synthetic:local",
         done: true,
         response: JSON.stringify({
-          files: [{ path: "generated/zof-model-regression.test.ts", content }],
+          files: [{ path: "generated/zof-model-regression.test.ts", content: suppliedContent }],
           suggestions: [],
         }),
       }),
@@ -80,10 +81,13 @@ try {
   assert.equal(accepted.status, 0);
   assert.equal(JSON.parse(accepted.stdout).written, false);
   assert.equal(requests, 2);
+  suppliedContent = "import {increment} from '../fixture.ts'; describe('bad framework',()=>it('case',()=>expect(increment(1)).toBe(2)));";
+  await assert.rejects(generateTestsWithOllama(input, options), (error) => error.code === "MODEL_CANDIDATE_FRAMEWORK_INVALID");
+  assert.equal(requests, 3);
   console.log(
     JSON.stringify({
       status: "passed",
-      checks: 2,
+      checks: 3,
       protocolFixtureOnly: true,
       liveModel: "NOT_RUN",
     }),

@@ -208,3 +208,12 @@ test("e2e: CLI dry-run JSON then explicit write never overwrites", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+
+test("security: source reads reject malformed UTF-8 rather than replacing input bytes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "zof-invalid-utf8-"));
+  try {
+    await writeFile(join(root, "invalid.ts"), Buffer.from([0xff, 0xfe, 0x61]));
+    await assert.rejects(readSource(root, "invalid.ts"), error => error.code === "FILE_UNAVAILABLE");
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

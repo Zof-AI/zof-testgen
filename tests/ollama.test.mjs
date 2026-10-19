@@ -111,6 +111,8 @@ test("integration: Ollama protocol sends bounded selected source and validates c
     assert.equal(request.body.stream, false);
     assert.equal(request.body.options.num_predict, 128);
     assert.equal(request.body.options.num_ctx, 8192);
+    assert.match(request.body.system, /import test from 'node:test'/);
+    assert.match(request.body.system, /exact argument and expected values/);
     assert.ok(Buffer.byteLength(JSON.stringify(request.body)) <= 32768);
     const prompt = JSON.parse(request.body.prompt);
     assert.match(prompt.source, /function clamp/);
@@ -388,7 +390,7 @@ test("integration: Python model candidate is syntax checked without module execu
     files: [
       {
         path: "generated/test_zof_model_regression.py",
-        content: 'raise RuntimeError("do not execute generated source")\n',
+        content: 'import unittest\nfrom fixture import clamp\nclass ModelTest(unittest.TestCase):\n    def test_clamp(self):\n        raise RuntimeError("do not execute generated source")\n        self.assertEqual(clamp(1),1)\n',
       },
     ],
     suggestions: [],
@@ -428,7 +430,7 @@ test("integration: Python model candidate is syntax checked without module execu
 
 test("security: Python CR and mixed newline source excludes unrelated declarations", async () => {
   const pythonInput = {language: "python", source: 'def clamp(value):\r    return value\rprivate_marker = "DO_NOT_TRANSMIT"\n', functions: ["clamp"], module: "fixture"};
-  const value = {files: [{path: "generated/test_zof_model_regression.py", content: 'import unittest\n'}], suggestions: []};
+  const value = {files: [{path: "generated/test_zof_model_regression.py", content: 'import unittest\nfrom fixture import clamp\nclass ModelTest(unittest.TestCase):\n    def test_clamp(self):\n        self.assertEqual(clamp(1),1)\n'}], suggestions: []};
   const server = await fixture((_request, response) => ok(response, envelope(value)));
   try {
     await generateTestsWithOllama(pythonInput, opts(server.port));
@@ -516,4 +518,36 @@ test("e2e: CLI config cannot grant consent; explicit flag produces reviewable dr
     await server.close();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+
+test("regression: unsupported Jest globals and assertion-free TypeScript candidates reject before execution", async () => {
+  for (const content of [
+    "import {clamp} from '../fixture.ts'; describe('clamp',()=>it('upper',()=>expect(clamp(10)).toBe(5)));",
+    "import test from 'node:test'; import assert from 'node:assert/strict'; import {clamp} from '../fixture.ts'; test('empty',()=>{});",
+    "import test from 'node:test'; import assert from 'node:assert/strict'; test('copied',()=>assert.equal(1,1));",
+  ]) {
+    const value = structuredClone(candidate); value.files[0].content = content;
+    const server = await fixture((_request, response) => ok(response, envelope(value)));
+    try { await assert.rejects(generateTestsWithOllama(input, opts(server.port)), safe("MODEL_CANDIDATE_FRAMEWORK_INVALID")); }
+    finally { await server.close(); }
+  }
+});
+
+test("regression: Python candidates need a unittest case, assertion and selected-module import", async () => {
+  const pyInput = { language: "python", source: "def clamp(x):\n    return x\n", functions: ["clamp"], module: "fixture" };
+  for (const content of ["raise RuntimeError('not a test')\n", "import unittest\nfrom fixture import clamp\n", "import unittest\nclass Cases(unittest.TestCase):\n    def test_case(self):\n        self.assertEqual(1,1)\n"]) {
+    const value = { files: [{path:"generated/test_zof_model_regression.py",content}], suggestions: [] };
+    const server = await fixture((_request, response) => ok(response, envelope(value)));
+    try { await assert.rejects(generateTestsWithOllama(pyInput, opts(server.port)), safe("MODEL_CANDIDATE_FRAMEWORK_INVALID")); }
+    finally { await server.close(); }
+  }
+});
+
+test("integration: named node:test and namespace strict assertions are supported", async () => {
+  const value = structuredClone(candidate);
+  value.files[0].content = "import {test as check} from 'node:test'; import * as strict from 'node:assert/strict'; import {clamp as target} from '../fixture.ts'; check('upper',()=>strict.equal(target(10),5));";
+  const server = await fixture((_request,response)=>ok(response,envelope(value)));
+  try { assert.equal((await generateTestsWithOllama(input,opts(server.port))).syntax.status,"validated"); }
+  finally { await server.close(); }
 });

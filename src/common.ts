@@ -1,7 +1,5 @@
-import { redactText } from "@zof-ai/evidence-spec";
-import { constants } from "node:fs";
-import { lstat, open, realpath } from "node:fs/promises";
-import { resolve, sep, isAbsolute } from "node:path";
+import { redactText, safeReadFile } from "@zof-ai/evidence-spec";
+import { isAbsolute } from "node:path";
 export const MAX_INPUT_BYTES = 4 * 1024 * 1024;
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
 export interface Finding {
@@ -77,42 +75,14 @@ export function relativePath(path: string): void {
 export async function readBounded(root: string, path: string): Promise<string> {
   relativePath(path);
   try {
-    const base = await realpath(root);
-    let full = base;
-    for (const part of path.split("/")) {
-      full = resolve(full, part);
-      const s = await lstat(full);
-      if (s.isSymbolicLink()) fail("SYMLINK_REJECTED");
-    }
-    if (!full.startsWith(base + sep)) fail("PATH_ESCAPE");
-    const before = await lstat(full);
-    if (!before.isFile() || before.size > MAX_INPUT_BYTES) fail("FILE_INVALID");
-    const handle = await open(
-      full,
-      constants.O_RDONLY | constants.O_NOFOLLOW | (constants.O_NONBLOCK ?? 0),
+    return new TextDecoder("utf-8", { fatal: true }).decode(
+      await safeReadFile(root, path, MAX_INPUT_BYTES),
     );
-    try {
-      const stat = await handle.stat();
-      if (!stat.isFile() || stat.size > MAX_INPUT_BYTES) fail("FILE_INVALID");
-      const buf = Buffer.alloc(MAX_INPUT_BYTES + 1);
-      let size = 0;
-      while (size < buf.length) {
-        const r = await handle.read(buf, size, buf.length - size, null);
-        if (!r.bytesRead) break;
-        size += r.bytesRead;
-      }
-      if (size > MAX_INPUT_BYTES) fail("INPUT_SIZE");
-      return new TextDecoder("utf-8", { fatal: true }).decode(
-        buf.subarray(0, size),
-      );
-    } finally {
-      await handle.close();
-    }
-  } catch (e) {
-    if (e instanceof SafeInputError) throw e;
+  } catch {
     fail("FILE_UNAVAILABLE");
   }
 }
+
 const severityOrder: Severity[] = ["info", "low", "medium", "high", "critical"];
 export function severity(value: unknown): Severity {
   if (!severityOrder.includes(value as Severity)) fail("SEVERITY_INVALID");

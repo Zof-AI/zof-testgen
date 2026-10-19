@@ -1,9 +1,7 @@
 import ts from "typescript";
-import { redact } from "@zof-ai/evidence-spec";
+import { redact, safeWriteFiles } from "@zof-ai/evidence-spec";
 import { spawnSync } from "node:child_process";
-import { mkdir, lstat, open, realpath } from "node:fs/promises";
-import { constants } from "node:fs";
-import { resolve, posix } from "node:path";
+import { posix } from "node:path";
 import {
   fail,
   guard,
@@ -154,6 +152,60 @@ function moduleValid(input: GenerationInput): void {
     const path = posix.normalize("generated/" + input.module);
     relativePath(path);
   }
+}
+
+/** Check the supported test framework without importing or running a candidate.
+ * This is a structural compatibility check, not a sandbox or correctness proof.
+ */
+export function validateCandidateFramework(source: string, input: GenerationInput): void {
+  if (input.language === "python") {
+    const result = python(JSON.stringify({ source, module: input.module }), `import ast,json,sys
+try:
+ d=json.load(sys.stdin); t=ast.parse(d["source"])
+ frameworks={n.asname or n.name for s in t.body if isinstance(s,ast.Import) for n in s.names if n.name=="unittest"}
+ modules={s.module for s in t.body if isinstance(s,ast.ImportFrom)}
+ cases=[n for n in t.body if isinstance(n,ast.ClassDef) and any(isinstance(b,ast.Attribute) and isinstance(b.value,ast.Name) and b.value.id in frameworks and b.attr=="TestCase" for b in n.bases)]
+ tests=[n for c in cases for n in c.body if isinstance(n,ast.FunctionDef) and n.name.startswith("test_")]
+ assertions=[n for t in tests for n in ast.walk(t) if isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute) and isinstance(n.func.value,ast.Name) and n.func.value.id=="self" and n.func.attr.startswith("assert")]
+ print(json.dumps(bool(frameworks and d["module"] in modules and tests and assertions)))
+except (SyntaxError,ValueError,RecursionError,KeyError):
+ sys.exit(2)
+`);
+    if (result.trim() !== "true") fail("MODEL_CANDIDATE_FRAMEWORK_INVALID");
+    return;
+  }
+  const ast = typescriptSyntax(source);
+  const tests = new Set<string>(), assertions = new Set<string>();
+  let targetImported = false;
+  for (const statement of ast.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const module = statement.moduleSpecifier.text;
+    const clause = statement.importClause;
+    if (!clause || clause.isTypeOnly) continue;
+    if (module === "node:test") {
+      if (clause.name) tests.add(clause.name.text);
+      if (clause.namedBindings && ts.isNamedImports(clause.namedBindings))
+        for (const element of clause.namedBindings.elements)
+          if (!element.isTypeOnly && (element.propertyName?.text ?? element.name.text) === "test") tests.add(element.name.text);
+    }
+    if (module === "node:assert/strict") {
+      if (clause.name) assertions.add(clause.name.text);
+      if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) assertions.add(clause.namedBindings.name.text);
+    }
+    if (module === input.module && clause.namedBindings && ts.isNamedImports(clause.namedBindings))
+      targetImported = clause.namedBindings.elements.some(e => !e.isTypeOnly && input.functions.includes(e.propertyName?.text ?? e.name.text));
+  }
+  let testCall = false, assertionCall = false, nodes = 0;
+  const visit = (node: ts.Node, depth = 0): void => {
+    if (++nodes > 100000 || depth > 100) fail("MODEL_CANDIDATE_FRAMEWORK_INVALID");
+    if (ts.isCallExpression(node)) {
+      if (ts.isIdentifier(node.expression) && tests.has(node.expression.text)) testCall = true;
+      if (ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression) && assertions.has(node.expression.expression.text)) assertionCall = true;
+    }
+    ts.forEachChild(node, child => visit(child, depth + 1));
+  };
+  visit(ast);
+  if (!targetImported || !testCall || !assertionCall) fail("MODEL_CANDIDATE_FRAMEWORK_INVALID");
 }
 
 /** Reject instead of modifying any supplied regression oracle or metadata. */
@@ -363,7 +415,7 @@ export async function writeCandidates(
   guard(result);
   // This public writer is also a boundary for caller-created candidates.
   assertNoSensitive(result, "GENERATION_OUTPUT_SENSITIVE");
-  if (!Array.isArray(result.files) || result.files.length > 100)
+  if (!Array.isArray(result.files) || result.files.length > 64)
     fail("FILES_INVALID");
   for (const file of result.files) {
     relativePath(file.path);
@@ -374,43 +426,12 @@ export async function writeCandidates(
     )
       fail("FILE_INVALID");
   }
-  if (options.dryRun !== false) return result.files.map((f) => f.path);
-  const base = await realpath(root);
-  const handles: Array<{
-    file: GenerationResult["files"][number];
-    handle: Awaited<ReturnType<typeof open>>;
-  }> = [];
+  if (options.dryRun !== false || result.files.length === 0) return result.files.map((f) => f.path);
   try {
-    for (const file of result.files) {
-      let parent = base;
-      const parts = file.path.split("/");
-      for (const part of parts.slice(0, -1)) {
-        parent = resolve(parent, part);
-        try {
-          await mkdir(parent);
-        } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-        }
-        const stat = await lstat(parent);
-        if (stat.isSymbolicLink() || !stat.isDirectory())
-          fail("SYMLINK_REJECTED");
-      }
-      const handle = await open(
-        resolve(base, file.path),
-        constants.O_WRONLY |
-          constants.O_CREAT |
-          constants.O_EXCL |
-          constants.O_NOFOLLOW,
-        0o600,
-      );
-      handles.push({ file, handle });
-    }
-    for (const { file, handle } of handles)
-      await handle.writeFile(file.content);
-    return result.files.map((f) => f.path);
+    await safeWriteFiles(root, result.files, { createParents: true });
+    return result.files.map((file) => file.path);
   } catch {
     return fail("OUTPUT_EXISTS_OR_UNAVAILABLE");
-  } finally {
-    for (const { handle } of handles) await handle.close();
   }
+
 }
