@@ -4,7 +4,7 @@ import {createServer} from 'node:http';
 import {spawnSync} from 'node:child_process';
 import {mkdir,writeFile,access} from 'node:fs/promises';
 import {resolve} from 'node:path';
-import {generateTests,generateTestsWithOllama,writeCandidates,SafeInputError} from '@zof-ai/testgen';
+import {generateTests,generateTestsWithOllama,writeCandidates,SafeInputError} from '@zofai/testgen';
 
 const sensitive='ghp_'+'A'.repeat(36);
 const input={language:'typescript',source:'export function example(value: string) { return value; }',functions:['example'],module:'../fixture.ts',reproductions:[{function:'example',args:[sensitive],expected:sensitive}]};
@@ -21,7 +21,7 @@ try{
   const root=resolve('privacy-fixture');await mkdir(root);
   await writeFile(resolve(root,'fixture.ts'),input.source);
   await writeFile(resolve(root,'config.json'),JSON.stringify({language:input.language,sourcePath:'fixture.ts',functions:input.functions,module:input.module,reproductions:input.reproductions}));
-  const cli=resolve('node_modules/@zof-ai/testgen/dist/cli.js');
+  const cli=resolve('node_modules/@zofai/testgen/dist/cli.js');
   for(const flags of [['--json'],['--json','--write']]){
     const output=spawnSync(process.execPath,[cli,'config.json','--root',root,...flags],{encoding:'utf8',env:{PATH:process.env.PATH}});
     assert.equal(output.status,2);assert.equal(output.stdout,'');assert.ok(!output.stderr.includes(sensitive));

@@ -5,7 +5,7 @@ The adapter implements the public [Ollama generate API](https://docs.ollama.com/
 Supply an already installed local model name and consent for each API operation with `allowLocalModel: true`. CLI consent comes only from `--allow-local-model`, never from a config file. In default deterministic mode there is no network access. Creating a configured adapter only validates options; invoking its `generate` method performs the request.
 
 ```js
-import { generateTestsWithOllama } from '@zof-ai/testgen';
+import { generateTestsWithOllama } from '@zofai/testgen';
 const result = await generateTestsWithOllama({
   language: 'typescript',
   source: 'export function clamp(n: number) { return Math.min(5, n); }',

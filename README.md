@@ -18,15 +18,15 @@ npm test
 
 The bootstrap downloads only the exact `v0.1.0` dependency assets from [GitHub Releases](https://github.com/Zof-AI/zof-testgen/releases), as listed in `scripts/release-dependencies.json`, verifies SHA256 and byte size, and adds them to the npm cache. It does not extract archives, run package scripts, collect application data, or send credentials. Downloads require the explicit flag and follow only HTTPS GitHub asset redirects. Installation then fetches ordinary third-party dependencies from npm. Use a writable npm cache; set `npm_config_cache` consistently for both commands if needed. An unavailable asset, changed hash, or oversized response stops installation.
 
-GitHub source and release artifacts are the initial distribution channel. These instructions do not claim that `@zof-ai` packages are published on npm or that the VS Code extension is listed in Marketplace.
+GitHub source and release artifacts are the initial distribution channel. These instructions do not claim that `@zofai` packages are published on npm or that the VS Code extension is listed in Marketplace.
 <!-- ZOF_RELEASE_INSTALL_END -->
 
 ## Local installation
 
-Use Node.js 22 or 24 on Linux or macOS with Python 3.10 or later available as `python3`. The shared file-access helper uses isolated Python standard-library descriptor operations; Python generation also needs its AST parser. File reads and writes fail closed on Windows or if the helper is unavailable. Pure in-memory TypeScript generation has no Python requirement. This prerelease depends on the reviewed `@zof-ai/evidence-spec` 0.1.0 candidate. Install both local artifacts together; public registry installation remains blocked until the dependency and this package are approved and published.
+Use Node.js 22 or 24 on Linux or macOS with Python 3.10 or later available as `python3`. The shared file-access helper uses isolated Python standard-library descriptor operations; Python generation also needs its AST parser. File reads and writes fail closed on Windows or if the helper is unavailable. Pure in-memory TypeScript generation has no Python requirement. This prerelease depends on the reviewed `@zofai/evidence-spec` 0.1.0 candidate. Install both local artifacts together; public registry installation remains blocked until the dependency and this package are approved and published.
 
 ```sh
-npm install --ignore-scripts /path/to/zof-ai-evidence-spec-0.1.0.tgz /path/to/zof-ai-testgen-0.1.0.tgz
+npm install --ignore-scripts /path/to/zofai-evidence-spec-0.1.0.tgz /path/to/zofai-testgen-0.1.0.tgz
 ```
 
 For source development, first stage the reviewed evidence candidate and install the locked development dependencies. Then run:
@@ -57,7 +57,7 @@ Use synthetic inputs. Recognized credentials and sensitive keyed values in repro
 ## Library
 
 ```js
-import { generateTests, readSource, writeCandidates } from '@zof-ai/testgen';
+import { generateTests, readSource, writeCandidates } from '@zofai/testgen';
 const result = generateTests({
   language: 'typescript', source: await readSource(process.cwd(), 'fixture.ts'),
   functions: ['clamp'], module: '../fixture.ts',
