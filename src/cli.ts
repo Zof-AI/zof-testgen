@@ -14,7 +14,7 @@ try {
     console.log(
       "zof-testgen CONFIG.json [--root DIR] [--write] [--json]\nOptional: --allow-local-model --model NAME [--ollama-port PORT] [--max-tokens N] [--model-timeout-ms N]\nDefault dry-run uses deterministic generation without network. --allow-local-model explicitly sends selected function source and supplied reproductions to a trusted local-only Ollama server at 127.0.0.1 (default port 11434). Never executes generated tests.",
     );
-  else if (args.includes("--version")) console.log("0.1.0");
+  else if (args.includes("--version")) console.log("0.1.1");
   else {
     let root = process.cwd(),
       write = false,

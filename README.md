@@ -2,13 +2,42 @@
 
 Create reviewable regression-test candidates for selected TypeScript and Python functions. Supplied bug reproductions become assertions; branch locations, boundary values and invalid-input cases become review suggestions. Default generation is deterministic and offline. An opt-in Ollama adapter can generate additional candidates through a trusted local model server. Both modes validate syntax without executing source or tests. Model candidates also need the supported test framework structure and an import of the selected module.
 
+<!-- ZOF_NPM_INSTALL_START -->
+## Install from npm
+
+Use Node.js 22 or 24 and npm. File-based operations require Linux or macOS with Python 3.10 or newer; Windows file operations fail closed. In a new project directory, install the version used by this guide:
+
+```sh
+npm install --ignore-scripts --save-exact @zof-ai/testgen@0.1.1
+npx --no-install zof-testgen --help
+```
+
+The package includes compiled JavaScript, TypeScript declarations and its runtime dependencies. No source build, Zof account or repository upload is required. `--ignore-scripts` disables installation lifecycle scripts; `--no-install` keeps the example commands from downloading another package.
+
+Confirm the public ESM entry point; this prints `function`:
+
+```sh
+node --input-type=module -e "import('@zof-ai/testgen').then(api => console.log(typeof api.generateTests))"
+```
+
+Run a packaged example from the same directory:
+
+```sh
+npx --no-install zof-testgen config.json --root node_modules/@zof-ai/testgen/examples/typescript-regression --json
+```
+
+The dry run returns a reviewable TypeScript regression candidate without executing it or writing a file.
+
+Package: [@zof-ai/testgen](https://www.npmjs.com/package/@zof-ai/testgen). The source-checkout instructions and three additional workflows follow.
+<!-- ZOF_NPM_INSTALL_END -->
+
 <!-- ZOF_RELEASE_INSTALL_START -->
 ## Install from GitHub source
 
 Requires Node.js 22 or 24, npm, and Git. Filesystem operations require Linux or macOS with Python 3.10 or newer; Windows file operations fail closed. Clone this repository and explicitly prepare its reviewed release dependencies:
 
 ```sh
-git clone https://github.com/Zof-AI/zof-testgen.git
+git clone --branch v0.1.1 --depth 1 https://github.com/Zof-AI/zof-testgen.git
 cd zof-testgen
 node scripts/bootstrap.mjs --allow-network
 npm ci --ignore-scripts --prefer-offline
@@ -16,28 +45,16 @@ npm run build
 npm test
 ```
 
-The bootstrap downloads only the exact `v0.1.0` dependency assets from [GitHub Releases](https://github.com/Zof-AI/zof-testgen/releases), as listed in `scripts/release-dependencies.json`, verifies SHA256 and byte size, and adds them to the npm cache. It does not extract archives, run package scripts, collect application data, or send credentials. Downloads require the explicit flag and follow only HTTPS GitHub asset redirects. Installation then fetches ordinary third-party dependencies from npm. Use a writable npm cache; set `npm_config_cache` consistently for both commands if needed. An unavailable asset, changed hash, or oversized response stops installation.
+The bootstrap downloads only the exact versioned dependency assets from [GitHub Releases](https://github.com/Zof-AI/zof-testgen/releases), as listed in `scripts/release-dependencies.json`, verifies SHA256 and byte size, and adds them to the npm cache. It does not extract archives, run package scripts, collect application data, or send credentials. Downloads require the explicit flag and follow only HTTPS GitHub asset redirects. Installation then fetches ordinary third-party dependencies from npm. Use a writable npm cache; set `npm_config_cache` consistently for both commands if needed. An unavailable asset, changed hash, or oversized response stops installation.
 
-GitHub source and release artifacts are the initial distribution channel. These instructions do not claim that `@zof-ai` packages are published on npm or that the VS Code extension is listed in Marketplace.
 <!-- ZOF_RELEASE_INSTALL_END -->
 
-## Local installation
+## Source development
 
-Use Node.js 22 or 24 on Linux or macOS with Python 3.10 or later available as `python3`. The shared file-access helper uses isolated Python standard-library descriptor operations; Python generation also needs its AST parser. File reads and writes fail closed on Windows or if the helper is unavailable. Pure in-memory TypeScript generation has no Python requirement. This prerelease depends on the reviewed `@zof-ai/evidence-spec` 0.1.0 candidate. Install both local artifacts together; public registry installation remains blocked until the dependency and this package are approved and published.
+Use Node.js 22 or 24 on Linux or macOS with Python 3.10 or later available as `python3`. The shared file-access helper uses isolated Python standard-library descriptor operations; Python generation also needs its AST parser. File reads and writes fail closed on Windows or if the helper is unavailable. Pure in-memory TypeScript generation has no Python requirement.
 
-```sh
-npm install --ignore-scripts /path/to/zof-ai-evidence-spec-0.1.0.tgz /path/to/zof-ai-testgen-0.1.0.tgz
-```
+For source development, follow the pinned GitHub installation above. `npm run build`, `npm test` and `npm pack --ignore-scripts` build, check and package the checkout. Runtime dependencies install automatically with the npm package.
 
-For source development, first stage the reviewed evidence candidate and install the locked development dependencies. Then run:
-
-```sh
-npm run build
-npm test
-npm pack --ignore-scripts
-```
-
-The lockfile retains portable semver dependencies. The source bootstrap prepares their exact GitHub release artifacts without requiring npm registry publication.
 
 ## Three examples
 

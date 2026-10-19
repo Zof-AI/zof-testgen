@@ -46,7 +46,7 @@ try {
   );
   const candidates = [];
   const evidence = resolve(
-    "../../orchestration/artifacts/zof-ai-evidence-spec-0.1.0.tgz",
+    "../../orchestration/artifacts/zof-ai-evidence-spec-0.1.1.tgz",
   );
   try {
     await access(evidence);
@@ -61,7 +61,7 @@ try {
     join(temp, packed.filename),
   ]);
   const cli = join(temp, "node_modules", "@zof-ai/testgen", "dist/cli.js");
-  assert.match(run(process.execPath, [cli, "--version"]), /0\.1\.0/);
+  assert.match(run(process.execPath, [cli, "--version"]), /0\.1\.1/);
   assert.match(run(process.execPath, [cli, "--help"]), /dry-run/);
   run(process.execPath, [
     "--input-type=module",

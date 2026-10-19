@@ -1,6 +1,6 @@
 {
   "name": "@zof-ai/testgen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reviewable regression test candidates with deterministic and opt-in local Ollama generation",
   "type": "module",
   "main": "./dist/index.js",
@@ -57,6 +57,6 @@
   },
   "dependencies": {
     "typescript": "5.9.3",
-    "@zof-ai/evidence-spec": "0.1.0"
+    "@zof-ai/evidence-spec": "0.1.1"
   }
 }
