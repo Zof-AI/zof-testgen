@@ -33,6 +33,18 @@ const pyInput = {
   module: "fixture",
   reproductions: [{ function: "clamp", args: [10], expected: 5 }],
 };
+test("security: source function names cannot shadow test framework imports", async () => {
+  const root = await mkdtemp(join(tmpdir(), "testgen-alias-"));
+  try {
+    await writeFile(join(root,"package.json"),'{"type":"module"}');
+    const input = {...tsInput, source:'export function test(x: number) { return x; }', functions:['test'], reproductions:[{function:'test',args:[3],expected:3}]};
+    await writeFile(join(root,'fixture.ts'),input.source);
+    await writeCandidates(root,generateTests(input),{dryRun:false});
+    const result=spawnSync(process.execPath,['--experimental-strip-types','--test','generated/zof-regression.test.ts'],{cwd:root,encoding:'utf8',timeout:10000,env:{PATH:process.env.PATH}});
+    assert.equal(result.status,0);
+    assert.throws(()=>generateTests({...pyInput,source:'def clamp(value):\n    yield value\n'}),/Input rejected/);
+  } finally { await rm(root,{recursive:true,force:true}); }
+});
 test("unit: deterministic candidates preserve oracle and suggest branches/boundaries", () => {
   const a = generateTests(tsInput),
     b = localDeterministicAdapter.generate(tsInput);

@@ -44,7 +44,7 @@ interface FunctionInfo {
 }
 const identifier = (v: unknown): v is string =>
   typeof v === "string" && /^[A-Za-z_][A-Za-z0-9_]{0,99}$/.test(v);
-const PYTHON_ANALYZE = `import ast,json,sys\ntry:\n t=ast.parse(sys.stdin.read())\n out=[]\n for n in t.body:\n  if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)):\n   out.append({'name':n.name,'parameters':len(n.args.posonlyargs)+len(n.args.args),'branches':[x.lineno for x in ast.walk(n) if isinstance(x,(ast.If,ast.IfExp,ast.For,ast.While,ast.Match))],'async':isinstance(n,ast.AsyncFunctionDef)})\n print(json.dumps(out))\nexcept (SyntaxError,ValueError,RecursionError):\n sys.exit(2)\n`;
+const PYTHON_ANALYZE = `import ast,json,sys\ntry:\n t=ast.parse(sys.stdin.read())\n out=[]\n for n in t.body:\n  if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)):\n   out.append({'name':n.name,'parameters':len(n.args.posonlyargs)+len(n.args.args),'branches':[x.lineno for x in ast.walk(n) if isinstance(x,(ast.If,ast.IfExp,ast.For,ast.While,ast.Match))],'async':(isinstance(n,ast.AsyncFunctionDef) or any(isinstance(x,(ast.Yield,ast.YieldFrom)) for x in ast.walk(n)))})\n print(json.dumps(out))\nexcept (SyntaxError,ValueError,RecursionError):\n sys.exit(2)\n`;
 const PYTHON_VALIDATE =
   "import ast,sys\ntry:\n ast.parse(sys.stdin.read())\nexcept (SyntaxError,ValueError,RecursionError):\n sys.exit(2)\n";
 function python(source: string, script: string): string {
@@ -231,25 +231,26 @@ export function generateTests(input: GenerationInput): GenerationResult {
     content =
       "// Review before execution. Expected values come from supplied bug reproductions.\nimport test from 'node:test';\nimport assert from 'node:assert/strict';\n" +
       (names.length
-        ? `import { ${names.join(", ")} } from ${JSON.stringify(input.module)};\n`
+        ? `import { ${names.map((name,index)=>name+" as __zof_fn_"+index).join(", ")} } from ${JSON.stringify(input.module)};\n`
         : "") +
       "\n";
     for (const [i, r] of reproductions.entries())
-      content += `test(${JSON.stringify("regression " + r.function + " " + (i + 1))}, () => {\n  assert.deepStrictEqual(${r.function}(...(${JSON.stringify(r.args)} as Parameters<typeof ${r.function}>)), ${JSON.stringify(r.expected)});\n});\n`;
+      content += `test(${JSON.stringify("regression " + r.function + " " + (i + 1))}, () => {\n  assert.deepStrictEqual(${"__zof_fn_"+names.indexOf(r.function)}(...(JSON.parse(${JSON.stringify(JSON.stringify(r.args))}) as Parameters<typeof ${"__zof_fn_"+names.indexOf(r.function)}>)), JSON.parse(${JSON.stringify(JSON.stringify(r.expected))}));\n});\n`;
     for (const name of input.functions)
       if (!reproductions.some((r) => r.function === name))
         content += `test.todo(${JSON.stringify("Add reviewed expected behavior for " + name)});\n`;
     typescriptSyntax(content);
   } else {
+    const names = [...new Set(reproductions.map(r=>r.function))];
     path = "generated/test_zof_regression.py";
     content =
       "# Review before execution. Expected values come from supplied bug reproductions.\nimport json\nimport unittest\n" +
       (reproductions.length
-        ? `from ${input.module} import ${[...new Set(reproductions.map((r) => r.function))].join(", ")}\n`
+        ? `from ${input.module} import ${names.map((name,index)=>name+" as _zof_fn_"+index).join(", ")}\n`
         : "") +
       "\nclass RegressionCandidates(unittest.TestCase):\n";
     for (const [i, r] of reproductions.entries())
-      content += `    def test_regression_${i + 1}(self):\n        args = json.loads(${JSON.stringify(JSON.stringify(r.args))})\n        expected = json.loads(${JSON.stringify(JSON.stringify(r.expected))})\n        self.assertEqual(${r.function}(*args), expected)\n\n`;
+      content += `    def test_regression_${i + 1}(self):\n        args = json.loads(${JSON.stringify(JSON.stringify(r.args))})\n        expected = json.loads(${JSON.stringify(JSON.stringify(r.expected))})\n        self.assertEqual(${"_zof_fn_"+names.indexOf(r.function)}(*args), expected)\n\n`;
     for (const name of input.functions)
       if (!reproductions.some((r) => r.function === name))
         content += `    @unittest.skip('Supply a reviewed expected behavior before execution')\n    def test_candidate_${name}(self):\n        pass\n\n`;
