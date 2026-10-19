@@ -56,7 +56,7 @@
     "@types/node": "22.19.11"
   },
   "dependencies": {
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "@zof-ai/evidence-spec": "0.1.1"
   }
 }
