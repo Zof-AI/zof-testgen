@@ -1,0 +1,26 @@
+{
+  "language": "python",
+  "sourcePath": "fixture.py",
+  "functions": [
+    "discount"
+  ],
+  "module": "fixture",
+  "reproductions": [
+    {
+      "function": "discount",
+      "args": [
+        100,
+        10
+      ],
+      "expected": 90
+    },
+    {
+      "function": "discount",
+      "args": [
+        100,
+        0
+      ],
+      "expected": 100
+    }
+  ]
+}

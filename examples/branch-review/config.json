@@ -1,0 +1,9 @@
+{
+  "language": "typescript",
+  "sourcePath": "fixture.ts",
+  "functions": [
+    "classify"
+  ],
+  "module": "../fixture.ts",
+  "coveredBranches": []
+}
