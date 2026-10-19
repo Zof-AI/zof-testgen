@@ -4,11 +4,10 @@ import {
   writeFile,
   readFile,
   rm,
-  access,
   copyFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 const repo = process.cwd();
 const temp = await mkdtemp(join(tmpdir(), "zof-package-"));
@@ -44,20 +43,34 @@ try {
     join(temp, "package.json"),
     JSON.stringify({ private: true, type: "module" }),
   );
-  const candidates = [];
-  const evidence = resolve(
-    "../../orchestration/artifacts/zof-ai-evidence-spec-0.1.1.tgz",
+  const dependencies = JSON.parse(
+    await readFile(join(repo, "scripts/release-dependencies.json"), "utf8"),
+  ).dependencies;
+  const expected = dependencies.find(
+    (dependency) => dependency.packageName === "@zof-ai/evidence-spec",
   );
-  try {
-    await access(evidence);
-    candidates.push(evidence);
-  } catch {}
+  assert.ok(expected);
+  const evidenceRoot = join(repo, "node_modules/@zof-ai/evidence-spec");
+  const installed = JSON.parse(
+    await readFile(join(evidenceRoot, "package.json"), "utf8"),
+  );
+  assert.equal(installed.name, expected.packageName);
+  assert.equal(installed.version, expected.version);
+  const evidence = JSON.parse(
+    run(
+      process.platform === "win32" ? "npm.cmd" : "npm",
+      ["pack", "--ignore-scripts", "--json", "--pack-destination", temp],
+      evidenceRoot,
+    ),
+  )[0];
+  assert.equal(evidence.name, expected.packageName);
+  assert.equal(evidence.version, expected.version);
   run(process.platform === "win32" ? "npm.cmd" : "npm", [
     "install",
     "--ignore-scripts",
     "--no-audit",
     "--no-fund",
-    ...candidates,
+    join(temp, evidence.filename),
     join(temp, packed.filename),
   ]);
   const cli = join(temp, "node_modules", "@zof-ai/testgen", "dist/cli.js");
